@@ -1,0 +1,146 @@
+[
+  {
+    "name": "Stripe",
+    "ats": "greenhouse",
+    "token": "stripe",
+    "country": "Ireland / Remote",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test to confirm"
+  },
+  {
+    "name": "Adyen",
+    "ats": "greenhouse",
+    "token": "adyen",
+    "country": "Netherlands",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test to confirm"
+  },
+  {
+    "name": "N26",
+    "ats": "greenhouse",
+    "token": "n26",
+    "country": "Germany",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test to confirm"
+  },
+  {
+    "name": "GetYourGuide",
+    "ats": "greenhouse",
+    "token": "getyourguide",
+    "country": "Germany",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test to confirm"
+  },
+  {
+    "name": "Celonis",
+    "ats": "greenhouse",
+    "token": "celonis",
+    "country": "Germany",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test to confirm"
+  },
+  {
+    "name": "Contentful",
+    "ats": "greenhouse",
+    "token": "contentful",
+    "country": "Germany",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test to confirm"
+  },
+  {
+    "name": "Trade Republic",
+    "ats": "greenhouse",
+    "token": "traderepublicbank",
+    "country": "Germany",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test to confirm"
+  },
+  {
+    "name": "SumUp",
+    "ats": "greenhouse",
+    "token": "sumup",
+    "country": "Germany / EU",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test to confirm"
+  },
+  {
+    "name": "Intercom",
+    "ats": "greenhouse",
+    "token": "intercom",
+    "country": "Ireland",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test to confirm"
+  },
+  {
+    "name": "GitLab",
+    "ats": "greenhouse",
+    "token": "gitlab",
+    "country": "Remote",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test to confirm"
+  },
+  {
+    "name": "Mollie",
+    "ats": "greenhouse",
+    "token": "mollie",
+    "country": "Netherlands",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test to confirm"
+  },
+  {
+    "name": "Prezi",
+    "ats": "greenhouse",
+    "token": "prezi",
+    "country": "Hungary",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test to confirm"
+  },
+  {
+    "name": "Bitrise",
+    "ats": "greenhouse",
+    "token": "bitrise",
+    "country": "Hungary",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test to confirm"
+  },
+  {
+    "name": "Deel",
+    "ats": "ashby",
+    "token": "deel",
+    "country": "Remote",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test to confirm"
+  },
+  {
+    "name": "Shapr3D",
+    "ats": "workable",
+    "token": "shapr3d",
+    "country": "Hungary",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test to confirm"
+  },
+  {
+    "name": "Pleo",
+    "ats": "lever",
+    "token": "pleo",
+    "country": "Denmark / EU",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test to confirm"
+  }
+]

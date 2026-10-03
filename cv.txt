@@ -1,0 +1,20 @@
+ALEX EXAMPLE
+Berlin, Germany | alex@example.com | linkedin.com/in/alex-example
+
+PROFILE
+Sample CV — replace this with your own in Settings. Analyst with experience in financial analysis, market research, dashboards and automation.
+
+EDUCATION
+MSc Economics and Business
+BSc Mathematics
+
+SKILLS
+Financial modeling, financial analysis, market research, Advanced Excel, Power BI, Looker Studio, SQL, HubSpot, n8n, APIs, Claude/LLMs, statistics
+Languages: English (fluent)
+
+EXPERIENCE
+Example Company | Analyst | 2024 - Present
+- Built financial models and investor pitch decks to support capital raising for small and mid-sized clients.
+- Researched investment criteria of lenders and investors and turned the findings into a prioritised partnership pipeline.
+- Automated recurring reporting with n8n workflows connecting APIs and LLMs, saving hours of manual work each week.
+- Built Looker Studio dashboards combining GA4 and CRM data to track KPIs and conversions.
