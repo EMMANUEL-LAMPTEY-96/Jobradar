@@ -426,7 +426,7 @@ class Handler(BaseHTTPRequestHandler):
         p, q = u.path, {k: v[0] for k, v in parse_qs(u.query).items()}
         try:
             if p in ("/", "/index.html"):
-                with open(os.path.join(HERE, "static", "index.html"), "rb") as f:
+                with open(first_existing("static/index.html", "index.html"), "rb") as f:
                     return self._send(200, f.read(), "text/html")
             if p == "/api/stats":
                 return self._send(200, stats())
@@ -621,8 +621,17 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(200, {"letter": A.cover_letter(cfg, cv, j), "mode": "template"})
 
 
+def first_existing(*rel_paths):
+    """Find a file whether the app is laid out in folders or flat (e.g. after a GitHub web upload)."""
+    for rp in rel_paths:
+        p = os.path.join(HERE, *rp.split("/"))
+        if os.path.exists(p):
+            return p
+    return os.path.join(HERE, *rel_paths[0].split("/"))
+
+
 def seed_files():
-    seed_dir = os.path.join(HERE, "seed")
+    seed_dir = os.path.join(HERE, "seed") if os.path.isdir(os.path.join(HERE, "seed")) else HERE
     for name, target in (("cv.txt", CV_PATH), ("watchlist.json", WATCH_PATH), ("settings.json", SETTINGS_PATH)):
         src = os.path.join(seed_dir, name)
         if not os.path.exists(target) and os.path.exists(src):

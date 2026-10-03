@@ -6,7 +6,7 @@ JobRadar pulls fresh listings from 7 public job APIs plus startup careers pages,
 
 Built by **Nii Lante Emmanuel Lamptey** ([LinkedIn](https://www.linkedin.com/in/emmanuel-lamptey-7120161a2/)) with Claude as an AI coding partner.
 
-![Dashboard](docs/dashboard.png)
+![Dashboard](dashboard.png)
 
 ## Why I built it
 Job boards don't filter for visa sponsorship, and most "remote" roles quietly require existing work rights. As a non-EU graduate in Hungary, I was spending hours reading ads only to find "no sponsorship" or "fluent German required" at the bottom. JobRadar reads them for me and ranks what's left.
@@ -24,11 +24,11 @@ Job boards don't filter for visa sponsorship, and most "remote" roles quietly re
 | **Cover letters** | A tailored template letter built from your most relevant CV bullets, or a fully AI-written letter through the Claude API |
 | **Application tracker** | Pipeline from Saved to Applied, Interview and Offer, automatic 7-day follow-up reminders, weekly goal, permit-expiry countdown, CSV export |
 
-![Job detail with sponsorship evidence and CV match](docs/job-detail.png)
+![Job detail with sponsorship evidence and CV match](job-detail.png)
 
-![Tailored cover letter](docs/cover-letter.png)
+![Tailored cover letter](cover-letter.png)
 
-![Application pipeline](docs/pipeline.png)
+![Application pipeline](pipeline.png)
 
 *Screenshots use sample data and fictional companies.*
 
@@ -55,8 +55,8 @@ Optional: a free [Adzuna](https://developer.adzuna.com/) key adds on-site jobs i
 app.py        local web server, API routes, SQLite storage, ranking
 sources.py    job-board and careers-page (ATS) fetchers
 analyze.py    sponsorship, language, role-fit, CV-match and cover-letter logic
-static/       single-page user interface
-seed/         sample CV, settings and startup watchlist used on first run
+index.html    single-page user interface
+cv.txt, settings.json, watchlist.json   sample CV, settings and startup watchlist used on first run
 ```
 
 ## Notes
