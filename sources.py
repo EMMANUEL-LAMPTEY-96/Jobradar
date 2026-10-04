@@ -213,8 +213,9 @@ def adzuna(cfg, log):
         log("Adzuna: skipped (add a free API key in Settings to enable Germany/Netherlands/Austria/Poland… search)")
         return []
     out = []
-    queries = cfg.get("adzuna_queries") or ["financial analyst english", "business analyst english",
-                                            "visa sponsorship analyst", "relocation analyst english"]
+    queries = cfg.get("adzuna_queries") or ["marketing analyst english", "growth analyst", "revops",
+                                            "financial analyst english", "fp&a analyst english",
+                                            "investment analyst", "visa sponsorship analyst"]
     for c in cfg.get("adzuna_countries") or ADZUNA_COUNTRIES:
         for qtext in queries:
             q = urllib.parse.urlencode({"app_id": app_id, "app_key": app_key, "what": qtext,

@@ -52,10 +52,20 @@ SPONSOR_NEGATIVE = [
     r"only (eu|eea) (citizens|candidates|residents)",
     r"(existing|valid) (eu )?work (authori[sz]ation|permit) (is )?required",
     r"no relocation",
+    r"(must|should|need to) be (legally )?(eligible|authori[sz]ed|permitted) to work in",
+    r"(eligib(le|ility)|authori[sz]ation|right) to work in (the )?(eu|european union|eea|germany|the netherlands|netherlands|uk|ireland|austria|poland|france|spain|portugal|sweden|denmark|belgium|switzerland|czech)",
+    r"(valid|existing|current) (eu |german |dutch )?(work|residence) (permit|visa|authori[sz]ation)",
+    r"(eu|eea|german|dutch) (work permit|residence permit|citizenship) (is )?(required|mandatory|needed|a must)",
+    r"(not|unable to|cannot|can't) (offer|provide|support|consider) (any )?(visa|relocation|work permit)",
+    r"visa sponsorship\W{0,3}(no|not available|n/a)\b",
+    r"(do|does|will) not (offer|provide|support) (visa|relocation|sponsorship)",
+    r"only (consider|accept|hire) (candidates|applicants) (who are )?(based|located|residing) in",
+    r"keine (visa|visum|arbeitserlaubnis)",
 ]
 
 SPONSOR_POS_RE = [(re.compile(p), w) for p, w in SPONSOR_POSITIVE]
 SPONSOR_NEG_RE = [re.compile(p) for p in SPONSOR_NEGATIVE]
+HELP_RE = re.compile(r"(help|helps|support|supports|assist|assists|guide)( you)?( to| in| with)?( (obtain|get|getting|obtaining|apply|applying))?|we (will )?(arrange|handle|cover|sponsor)")
 
 
 def sponsorship(text, source_flag=None):
@@ -77,12 +87,15 @@ def sponsorship(text, source_flag=None):
     for rx in SPONSOR_NEG_RE:
         m = rx.search(t)
         if m:
+            before = t[max(0, m.start() - 50):m.start()]
+            if HELP_RE.search(before):  # "we help you obtain a valid work permit" is positive
+                continue
             score -= 8
             evidence.append("NEGATIVE: " + _snippet(t, m))
     negative = any(e.startswith("NEGATIVE") for e in evidence)
     if negative:
         evidence = [e for e in evidence if e.startswith("NEGATIVE") or e.startswith("Job board")]
-    if negative and not source_flag:
+    if negative:  # the ad's own words beat any board-level flag
         label = "No"
     elif score <= -3:
         label = "No"
@@ -128,6 +141,32 @@ NICE_TO_HAVE_RE = re.compile(r"\b(a plus|plus|nice to have|nice-to-have|advantag
                              r"desirable|preferred|is an asset|not required|optional)\b")
 
 
+STOPWORDS = {
+    "English": "the and with for you are our will your this that have from team work we in of to is be as on".split(),
+    "German": "und der die das mit für sie wir ihr ist von zu auf eine einen bei oder sowie unsere deine ihre wird nicht auch".split(),
+    "Hungarian": "és a az hogy vagy nem egy is van munka feladatok elvárások előny amit kft munkavégzés valamint számára".split(),
+    "Dutch": "en het een van je wij voor met zijn ons onze jouw bij wordt naar als ook niet heb".split(),
+    "French": "et le la les des une pour avec vous nous est dans sur votre notre sont aux".split(),
+    "Polish": "i w na z do się jest oraz dla nie od że jak będzie twoje nasz".split(),
+    "Spanish": "y el la los las con para por una que del nuestro tu tus somos".split(),
+    "Czech": "a v na s se je pro do že jako být nebo práce".split(),
+}
+
+
+def ad_language(text):
+    """Guess the language an ad is written in from common words. Returns (lang, share)."""
+    words = re.findall(r"[a-zäöüßáéíóöőúüűàèâêîôûçñłśżźćńąęěščřžýů]+", (text or "").lower()[:6000])
+    if len(words) < 25:
+        return "English", 1.0
+    counts = {}
+    for lang, sw in STOPWORDS.items():
+        sset = set(sw)
+        counts[lang] = sum(1 for w in words if w in sset)
+    lang = max(counts, key=counts.get)
+    total = sum(counts.values()) or 1
+    return lang, counts[lang] / total
+
+
 def language_flags(text, ok_languages=("English",)):
     t = norm(text)
     flags = []
@@ -140,39 +179,70 @@ def language_flags(text, ok_languages=("English",)):
             break
     if GERMAN_AD_RE.search(t) and "German" not in flags:
         flags.append("German")
+    lang, share = ad_language(text)
+    if lang != "English" and share >= 0.4 and lang not in flags:
+        flags.append(lang)  # the whole ad is written in another language
     return [f for f in flags if f not in ok_languages]
 
 
 # ---------------------------------------------------------------- role relevance
+# Three target tracks. A job only counts if its TITLE matches a track; the description
+# can add a bonus but never qualifies a job on its own (that let unrelated jobs through).
 
-ROLE_GROUPS = {
-    "Finance": ["financial analyst", "finance analyst", "fp&a", "fp & a", "financial planning", "investment analyst",
-                "investment associate", "corporate finance", "treasury", "controller", "controlling", "accountant",
-                "accounting", "credit analyst", "risk analyst", "equity research", "valuation", "m&a", "private equity",
-                "venture capital", "finance associate", "finance manager", "financial", "finance", "audit",
-                "billing", "revenue analyst", "pricing analyst", "investor relations"],
-    "Business/Strategy": ["business analyst", "business developer", "strategy", "strategic", "business operations", "bizops",
-                          "operations analyst", "operations associate", "consultant", "consulting",
-                          "market intelligence", "market research", "research analyst", "commercial analyst",
-                          "business development", "partnerships", "international trade", "procurement",
-                          "supply chain analyst", "economist", "analyst", "project manager", "program manager",
-                          "project coordinator", "pmo"],
-    "Tech-adjacent": ["revops", "revenue operations", "sales operations", "marketing operations", "growth analyst",
-                      "data analyst", "bi analyst", "business intelligence", "reporting analyst", "product analyst",
-                      "product operations", "customer success", "account manager", "account executive",
-                      "solutions consultant", "implementation", "onboarding specialist", "crm", "hubspot",
-                      "salesforce", "automation specialist", "ai operations", "sales development", "sdr", "bdr"],
+TRACKS = {
+    "Analytics & Growth": {
+        "strong": ["marketing analyst", "growth analyst", "revops", "revenue operations", "marketing operations",
+                   "sales operations analyst", "gtm analyst", "gtm engineer", "go-to-market analyst",
+                   "gtm operations", "seo analyst", "seo specialist", "seo manager", "seo strategist", "geo specialist",
+                   "ai search", "aeo", "web analyst", "digital analyst", "marketing data analyst", "insights analyst",
+                   "crm analyst", "hubspot", "marketing automation", "automation specialist", "automation analyst",
+                   "ai operations", "ai automation", "ai implementation", "ai specialist", "ai analyst",
+                   "no-code", "low-code automation", "growth marketing analyst", "performance marketing analyst",
+                   "lifecycle analyst", "content analyst"],
+        "weak": ["data analyst", "bi analyst", "business intelligence", "reporting analyst", "product analyst",
+                 "analytics specialist", "analytics analyst", "growth", "crm specialist", "seo"],
+        "context": ["ga4", "google analytics", "looker", "hubspot", "salesforce", "n8n", "zapier", "make.com",
+                    "seo", "semrush", "funnel", "attribution", "llm", "chatgpt", "automation", "b2b", "saas"],
+    },
+    "Finance & Business": {
+        "strong": ["financial analyst", "finance analyst", "fp&a", "fp & a", "financial planning", "financial reporting",
+                   "reporting analyst", "controlling", "controller", "management accountant", "general ledger",
+                   "record to report", "r2r", "business analyst", "commercial analyst", "pricing analyst",
+                   "revenue analyst", "treasury analyst", "treasury", "transaction services", "valuation analyst",
+                   "m&a analyst", "deals analyst", "corporate finance analyst", "finance associate",
+                   "finance graduate", "graduate programme", "graduate program", "finance trainee", "budget analyst",
+                   "cost analyst", "strategy analyst", "business operations analyst", "operations analyst",
+                   "market research analyst", "market intelligence analyst", "research analyst", "economist"],
+        "weak": ["finance", "financial", "accountant", "accounting", "audit", "analyst", "consultant", "strategy"],
+        "context": ["sap", "s/4hana", "ifrs", "excel", "power bi", "forecast", "budget", "variance", "month-end",
+                    "shared service", "global business services", "gbs", "big four", "english"],
+    },
+    "Investment & Dev Finance": {
+        "strong": ["investment analyst", "investment associate", "investment officer", "portfolio analyst",
+                   "private equity", "venture capital", "impact invest", "development finance", "trade finance",
+                   "commodity", "commodities", "credit analyst", "credit risk analyst", "business development analyst",
+                   "investor relations", "fund analyst", "origination", "structured finance", "blended finance",
+                   "deal analyst", "deal team", "capital markets analyst", "financial inclusion", "microfinance"],
+        "weak": ["investment", "portfolio", "credit", "fund"],
+        "context": ["africa", "emerging market", "frontier market", "impact", "development finance", "dfi", "sme",
+                    "ghana", "west africa", "sub-saharan", "cocoa", "agri", "export", "esg", "blended"],
+    },
 }
+TRACK_NAMES = list(TRACKS)
 
 EXCLUDE_TITLE = ["software engineer", "software developer", "web developer", "developer", "devops", "frontend",
                  "front-end", "backend", "back-end", "full stack", "fullstack", "sre", "machine learning engineer",
-                 "android", "ios", "security analyst", "soc analyst", "cyber", "penetration", "qa analyst",
-                 "qa engineer", "test analyst", "nurse", "driver", "warehouse", "werkstudent", "working student",
-                 "intern", "internship", "praktikum", "ausbildung", "teacher", "physician", "doctor", "electrician",
-                 "mechanic", "cook", "chef"]
-EXCLUDE_OVERRIDE = ["business developer", "business development"]
+                 "data engineer", "android", "ios", "security analyst", "soc analyst", "cyber", "penetration",
+                 "qa analyst", "qa engineer", "test analyst", "account executive", "sales representative",
+                 "sales development", "sdr", "bdr", "sales manager", "inside sales", "customer support",
+                 "customer service", "support specialist", "call center", "call centre", "recruiter", "talent acquisition",
+                 "nurse", "driver", "warehouse", "werkstudent", "working student", "intern", "internship",
+                 "praktikum", "ausbildung", "teacher", "tutor", "physician", "doctor", "electrician", "mechanic",
+                 "cook", "chef", "cashier", "store", "retail assistant", "field sales", "telemarketing"]
+EXCLUDE_OVERRIDE = ["business developer", "business development analyst", "gtm engineer", "automation engineer"]
 SENIOR_TITLE = ["director", "vp", "svp", "evp", "vice president", "head of", "chief", "principal", "managing partner",
-                "cfo", "coo", "ceo", "cto", "team lead", "lead analyst", "senior manager"]
+                "cfo", "coo", "ceo", "cto", "team lead", "lead analyst", "senior manager", "staff"]
+JUNIOR_TITLE = ["junior", "graduate", "entry", "trainee", "associate", "analyst i", "assistant analyst"]
 
 
 def _word_in(phrase, text):
@@ -180,30 +250,33 @@ def _word_in(phrase, text):
 
 
 def role_relevance(title, text, wanted_groups):
-    """Return (score 0-100, matched group, seniority_flag)."""
+    """Return (score 0-100, track name, senior flag). Score 0 = not one of your target roles."""
     tl = norm(title)
-    tx = norm(text)[:6000]
+    tx = norm(text)[:8000]
     if any(_word_in(x, tl) for x in EXCLUDE_TITLE) and not any(x in tl for x in EXCLUDE_OVERRIDE):
         return 0, "", False
-    best, group = 0, ""
-    for g, kws in ROLE_GROUPS.items():
-        if wanted_groups and g not in wanted_groups:
+    wanted = [g for g in (wanted_groups or TRACK_NAMES) if g in TRACKS] or TRACK_NAMES
+    best, track = 0, ""
+    for g in wanted:
+        t = TRACKS[g]
+        if any(_word_in(k, tl) for k in t["strong"]):
+            s = 70
+        elif any(_word_in(k, tl) for k in t["weak"]):
+            s = 45
+        else:
             continue
-        s = 0
-        for kw in kws:
-            k = " " + kw + " " if len(kw) <= 4 else kw
-            if k in tl:
-                s = max(s, 70 if len(kw) > 7 else 55)
-            elif k in tx:
-                s = max(s, 25)
+        ctx = sum(1 for k in t["context"] if k in tx)
+        s += min(20, ctx * 4)
         if s > best:
-            best, group = s, g
-    senior = any(_word_in(x, tl) for x in SENIOR_TITLE)
+            best, track = s, g
+    if not best:
+        return 0, "", False
+    senior = any(_word_in(x, tl) for x in SENIOR_TITLE) or _word_in("senior", tl) or _word_in("sr", tl)
     if senior:
-        best = max(0, best - 30)
-    if any(x in tl for x in ["junior", "graduate", "entry", "associate", "trainee", "analyst"]):
-        best = min(100, best + 15)
-    return best, group, senior
+        best -= 35
+    if any(_word_in(x, tl) for x in JUNIOR_TITLE):
+        best += 10
+    return max(1, min(100, best)), track, senior
 
 
 # ---------------------------------------------------------------- CV match

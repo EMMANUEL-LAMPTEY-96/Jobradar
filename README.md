@@ -2,7 +2,7 @@
 
 **An AI-assisted job-search app for international candidates looking for visa-sponsoring jobs in Europe.**
 
-JobRadar pulls fresh listings from 7 public job APIs plus startup careers pages, scores every job on how likely it is to sponsor a visa, how well it fits your target roles and CV, and whether it needs a language you don't speak. It then drafts a tailored cover letter and tracks each application through to an offer.
+JobRadar pulls fresh listings from 7 public job APIs plus startup careers pages, keeps only the jobs that match your target roles, countries and language, flags which ones sponsor visas, and prepares a ready-to-submit application kit for each one: the right CV, a tailored cover letter and answers to the usual form questions.
 
 Built by **Nii Lante Emmanuel Lamptey** ([LinkedIn](https://www.linkedin.com/in/emmanuel-lamptey-7120161a2/)) with Claude as an AI coding partner.
 
@@ -16,17 +16,16 @@ Job boards don't filter for visa sponsorship, and most "remote" roles quietly re
 | Feature | How it works |
 |---|---|
 | **Job aggregation** | Arbeitnow (with its visa-sponsorship filter), The Muse, Remotive, RemoteOK, Jobicy, Himalayas, optional Adzuna, plus a watchlist of startups on Greenhouse, Lever, Ashby and Workable |
-| **Visa-sponsorship detection** | Pattern matching on the ad text for positive signals (visa sponsorship, relocation package, EU Blue Card, highly-skilled migrant) and negative ones ("unable to sponsor", "must already have the right to work"), with the evidence shown |
-| **Language filter** | Flags ads that require German, Dutch, Hungarian, French and others, while ignoring "a plus" or "nice to have" |
-| **Role fit** | Classifies titles into Finance, Business/Strategy and Tech-adjacent groups; filters out engineering roles and pushes down senior titles |
-| **CV match** | Compares ~150 skills between the job ad and your CV, listing what matches and what is missing |
-| **Ranking** | One fit score combining role fit, CV match, sponsorship, location priority, language needs and freshness |
-| **Cover letters** | A tailored template letter built from your most relevant CV bullets, or a fully AI-written letter through the Claude API |
-| **Application tracker** | Pipeline from Saved to Applied, Interview and Offer, automatic 7-day follow-up reminders, weekly goal, permit-expiry countdown, CSV export |
+| **Target tracks** | A job only counts if its title matches one of three tracks: Analytics & Growth (marketing, RevOps, SEO/GEO, AI ops), Finance & Business (financial, FP&A, reporting, business analyst) and Investment & Dev Finance (investment, credit, trade and impact finance) |
+| **Strict filters, with reasons** | Removes wrong roles, jobs outside your chosen countries, US-only or worldwide remote roles, ads written in or requiring another language, "no sponsorship" ads, senior roles, and (outside your home country) ads with no sponsorship signal. Every removed job shows why. |
+| **Visa-sponsorship detection** | Positive signals (visa sponsorship, relocation package, EU Blue Card, highly-skilled migrant) versus negatives ("must be eligible to work in the EU", "valid work permit required"), with the evidence shown |
+| **CV match** | Compares ~150 skills between the ad and the right CV for that track (two CVs supported) |
+| **Application kit** | For each job: which CV to attach, a tailored cover letter, ready answers to common application-form questions, and a pre-filled email when the ad gives an address. You review and submit. |
+| **Application tracker** | Daily apply queue, pipeline from Saved to Offer, 7-day follow-up reminders, weekly goal, permit-expiry countdown, CSV export |
 
-![Job detail with sponsorship evidence and CV match](job-detail.png)
+![Application kit with cover letter and ready form answers](cover-letter.png)
 
-![Tailored cover letter](cover-letter.png)
+![Filtered-out jobs, each with the reason](job-detail.png)
 
 ![Application pipeline](pipeline.png)
 
@@ -56,7 +55,7 @@ app.py        local web server, API routes, SQLite storage, ranking
 sources.py    job-board and careers-page (ATS) fetchers
 analyze.py    sponsorship, language, role-fit, CV-match and cover-letter logic
 index.html    single-page user interface
-cv.txt, settings.json, watchlist.json   sample CV, settings and startup watchlist used on first run
+cv.txt, cv_analytics.txt, settings.json, watchlist.json   sample CVs, settings and startup watchlist
 ```
 
 ## Notes

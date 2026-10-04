@@ -81,6 +81,8 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 .pipe .col h4{margin:4px 4px 8px;font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .pipe .it{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:6px;cursor:pointer;font-size:13px}
 .due{color:var(--bad);font-weight:600}
+.kitbox{background:var(--info-bg);border-radius:10px;padding:12px;margin:6px 0 10px}
+.answers td{padding:6px 4px}
 </style>
 </head>
 <body>
@@ -114,7 +116,8 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     </div>
   </div>
   <div class="card" style="margin-top:14px">
-    <h2>Top matches right now</h2>
+    <h2>Today's apply queue</h2>
+    <p class="muted small" style="margin-top:-6px">Your best-fit jobs that passed every filter. Open one, use its application kit, submit, and press <b>I applied</b>.</p>
     <div id="topjobs"></div>
   </div>
 </section>
@@ -125,9 +128,9 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     <input id="fq" placeholder="Search title, company, city…" style="min-width:220px">
     <select id="fstatus"><option value="new">New</option><option value="saved">Saved</option><option value="hidden">Hidden</option><option value="all">All</option></select>
     <select id="fsponsor"><option value="">Any sponsorship</option><option value="yes">Sponsors or likely</option><option value="strong">Sponsors (strong signal)</option></select>
-    <select id="fgroup"><option value="">All role types</option><option>Finance</option><option>Business/Strategy</option><option>Tech-adjacent</option></select>
+    <select id="fgroup"><option value="">All 3 tracks</option><option>Analytics & Growth</option><option>Finance & Business</option><option>Investment & Dev Finance</option></select>
     <select id="fregion"><option value="">All locations</option></select>
-    <label class="small"><input type="checkbox" id="fnolang" checked> English-only</label>
+    <label class="small" title="See jobs the filters removed, with the reason"><input type="checkbox" id="fhidden"> Show filtered-out</label>
     <select id="fsort"><option value="rank">Best fit</option><option value="date">Newest</option><option value="match">CV match</option></select>
     <span class="muted small" id="fcount"></span>
   </div>
@@ -181,7 +184,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
     </div>
     <div class="card">
       <h2>Search the big boards (pre-built searches)</h2>
-      <div class="filters"><input id="k_kw" value="financial analyst" style="flex:1"><select id="k_loc"></select></div>
+      <div class="filters"><input id="k_kw" value="marketing analyst" list="k_presets" style="flex:1"><datalist id="k_presets"><option>marketing analyst</option><option>growth analyst</option><option>revops analyst</option><option>marketing operations</option><option>seo analyst</option><option>ai automation</option><option>financial analyst</option><option>fp&a analyst</option><option>business analyst</option><option>financial reporting analyst</option><option>investment analyst</option><option>credit analyst</option><option>trade finance</option><option>impact investment</option></datalist><select id="k_loc"></select></div>
       <div class="links small" id="k_links"></div>
       <h3>Sponsor-friendly boards & registers</h3>
       <div class="links small" id="boards"></div>
@@ -205,12 +208,23 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       <label class="f">Cover-letter intro (your degrees and experience in one or two sentences)</label><textarea id="s_intro" style="min-height:70px"></textarea>
       <label class="f">Cover-letter growth line (optional, e.g. a certification you're working on)</label><input id="s_growth" style="width:100%">
       <label class="f">Work-authorisation sentence (used in cover letters)</label><textarea id="s_auth" style="min-height:80px"></textarea>
-      <label class="f">Role types</label>
+      <h3>What to look for</h3>
+      <label class="f">Target tracks (a job's title must match one)</label>
       <div id="s_groups" class="small"></div>
+      <label class="f">Countries to include</label>
+      <div id="s_countries" class="small" style="columns:2"></div>
+      <label class="small" style="display:block;margin-top:8px"><input type="checkbox" id="s_remeu"> Include remote jobs open to Europe</label>
+      <label class="small" style="display:block"><input type="checkbox" id="s_remww"> Include worldwide remote jobs (often need existing work rights)</label>
+      <label class="small" style="display:block"><input type="checkbox" id="s_reqsp"> Outside my home country, only show jobs that mention sponsorship or relocation</label>
+      <label class="small" style="display:block"><input type="checkbox" id="s_hidesr"> Hide senior roles (Senior, Lead, Head of, Director)</label>
+      <label class="f">Home country (where you already live; sponsorship mention not required)</label><input id="s_home" style="width:200px">
       <label class="f">Languages you can work in (comma-separated)</label><input id="s_langs" style="width:100%">
-      <label class="f">Priority countries (comma-separated)</label><input id="s_prio" style="width:100%">
-      <label class="small" style="display:block;margin-top:8px"><input type="checkbox" id="s_hideout"> Hide jobs restricted to outside Europe</label>
-      <label class="small" style="display:block"><input type="checkbox" id="s_hidex"> Hide engineering / unrelated job titles</label>
+      <label class="f">Priority countries, ranked higher (comma-separated)</label><input id="s_prio" style="width:100%">
+      <h3>Application answers</h3>
+      <label class="f">Work authorisation: jobs in your home country</label><input id="s_wah" style="width:100%">
+      <label class="f">Work authorisation: jobs abroad</label><input id="s_waa" style="width:100%">
+      <label class="f">Common form questions <span class="muted">(one per line: Question :: Answer. You can use {company}, {title}, {linkedin})</span></label>
+      <textarea id="s_answers" style="min-height:220px;font-size:12.5px"></textarea>
       <h3>Job sources</h3><div id="s_sources" class="small"></div>
       <h3>Optional keys</h3>
       <p class="muted small">Adzuna (free key at developer.adzuna.com) adds on-site jobs in Germany, Netherlands, Austria, Poland and more. An Anthropic API key enables AI-written cover letters; without it you still get tailored template letters.</p>
@@ -221,10 +235,13 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       <div style="margin-top:12px"><button class="btn" onclick="saveSettings()">Save settings</button></div>
     </div>
     <div class="card">
-      <h2>Your CV (plain text)</h2>
-      <p class="muted small">Used for keyword matching and cover letters. Keep achievements as lines starting with “- ” so the letter writer can pick the most relevant ones.</p>
-      <textarea id="cv" style="min-height:560px;font-size:12.5px"></textarea>
-      <div style="margin-top:10px"><button class="btn" onclick="saveCV()">Save CV & re-score jobs</button></div>
+      <h2>Your CVs (plain text)</h2>
+      <p class="muted small">Analytics & Growth jobs use the Analytics CV; Finance and Investment jobs use the Finance CV. Keep achievements as lines starting with “- ” so the cover letter can pick the most relevant ones.</p>
+      <label class="f">Finance & Investment CV</label>
+      <textarea id="cv" style="min-height:300px;font-size:12.5px"></textarea>
+      <label class="f">Analytics & Growth CV</label>
+      <textarea id="cv2" style="min-height:300px;font-size:12.5px"></textarea>
+      <div style="margin-top:10px"><button class="btn" onclick="saveCV()">Save CVs & re-score jobs</button></div>
     </div>
   </div>
 </section>
@@ -263,7 +280,7 @@ function jobCard(j, sel){
     <div class="score ${scoreCls(s)}" title="Overall fit">${s}</div>
     <div><div class="jt">${esc(j.title)}</div>
     <div class="meta">${esc(j.company)} · ${esc(j.location || j.region)} · ${esc(j.posted||"")} · ${esc(j.source)}</div>
-    <div class="chips">${sponsorChip(j.sponsor_label)}${langChips(j.lang_flags)}
+    <div class="chips">${j.visible===0&&j.hide_reason?`<span class="chip bad">Filtered: ${esc(j.hide_reason)}</span>`:""}${sponsorChip(j.sponsor_label)}${langChips(j.lang_flags)}
       <span class="chip">CV match ${j.match_score}%</span>${j.role_group?`<span class="chip">${esc(j.role_group)}</span>`:""}
       ${j.senior?'<span class="chip warn">Senior</span>':""}${j.salary?`<span class="chip">${esc(j.salary)}</span>`:""}
       ${j.status!=="new"?`<span class="chip info">${esc(j.status)}</span>`:""}</div></div></div>`;
@@ -284,16 +301,16 @@ async function loadHome(){
   $("#kpis").innerHTML = `
     <div class="card kpi"><div class="l">Days left on permit</div><div class="v">${s.days_left ?? "–"}</div><div class="l">≈ ${weeks} weeks · plan for ~2–3 months from offer to permit</div></div>
     <div class="card kpi"><div class="l">Applied this week</div><div class="v">${s.applied_this_week} / ${s.weekly_goal}</div><div class="bar"><i style="width:${pct}%"></i></div></div>
-    <div class="card kpi"><div class="l">New sponsor-friendly jobs</div><div class="v">${s.sponsor_new}</div><div class="l">${s.total} jobs tracked in total</div></div>
+    <div class="card kpi"><div class="l">Jobs that passed your filters</div><div class="v">${s.sponsor_new}</div><div class="l" title="${esc(Object.entries(s.hidden||{}).map(([k,v]) => v+' · '+k).join('\n'))}">${Object.values(s.hidden||{}).reduce((a,b)=>a+b,0)} filtered out of ${s.total} · <a href="#" onclick="showHidden();return false">see why</a></div></div>
     <div class="card kpi"><div class="l">Applied · Interview · Offer</div><div class="v">${b.applied||0} · ${b.interview||0} · ${b.offer||0}</div><div class="l">${b.saved||0} saved to apply</div></div>`;
   const pipe = await api("/api/jobs?status=pipeline&sort=applied&limit=500");
   const today = new Date().toISOString().slice(0,10);
   const due = pipe.jobs.filter(j => j.follow_up && j.follow_up <= today && ["applied","interview"].includes(j.status));
   $("#followups").innerHTML = due.length ? `<table>${due.map(j => `<tr><td><b>${esc(j.company)}</b><br>${esc(j.title)}</td><td class="due">${esc(j.follow_up)}</td><td><a href="#" onclick="openJob('${j.id}');return false">open</a></td></tr>`).join("")}</table>`
     : '<div class="muted">Nothing due. When you mark a job as Applied, a follow-up is scheduled 7 days later.</div>';
-  const top = await api("/api/jobs?status=new&sponsor=yes&nolang=1&limit=8");
+  const top = await api("/api/jobs?status=new&limit=10");
   $("#topjobs").innerHTML = top.jobs.length ? `<div class="list" style="max-height:none">${top.jobs.map(j => jobCard(j)).join("")}</div>`
-    : '<div class="empty">No jobs yet — press <b>Fetch jobs now</b>.</div>';
+    : '<div class="empty">Nothing in your queue yet. Press <b>Fetch jobs now</b>. If a fetch finds jobs but none pass, open <b>see why</b> above to check what is being filtered out.</div>';
   $("#topjobs").querySelectorAll(".job").forEach(el => el.onclick = () => openJob(el.dataset.id));
   pollRefresh(true);
 }
@@ -313,10 +330,10 @@ async function pollRefresh(once){
 
 // ---------- find
 let findTimer;
-["#fq","#fstatus","#fsponsor","#fgroup","#fregion","#fnolang","#fsort"].forEach(s => $(s).addEventListener("input", () => { clearTimeout(findTimer); findTimer = setTimeout(loadJobs, 250); }));
+["#fq","#fstatus","#fsponsor","#fgroup","#fregion","#fhidden","#fsort"].forEach(s => $(s).addEventListener("input", () => { clearTimeout(findTimer); findTimer = setTimeout(loadJobs, 250); }));
 async function loadJobs(){
   const p = new URLSearchParams({status:$("#fstatus").value, sponsor:$("#fsponsor").value, group:$("#fgroup").value,
-    region:$("#fregion").value, q:$("#fq").value, sort:$("#fsort").value, nolang:$("#fnolang").checked?"1":"0"});
+    region:$("#fregion").value, q:$("#fq").value, sort:$("#fsort").value, hidden:$("#fhidden").checked?"1":"0"});
   const r = await api("/api/jobs?" + p);
   const cur = $("#fregion").value;
   $("#fregion").innerHTML = '<option value="">All locations</option>' + r.regions.map(x => `<option ${x===cur?"selected":""}>${esc(x)}</option>`).join("");
@@ -325,6 +342,7 @@ async function loadJobs(){
   $("#joblist").querySelectorAll(".job").forEach(el => el.onclick = () => { SEL = el.dataset.id; $("#joblist").querySelectorAll(".job").forEach(x => x.classList.toggle("sel", x === el)); renderDetail(SEL, "#detail"); });
 }
 async function openJob(id){ showTab("find"); SEL = id; renderDetail(id, "#detail"); }
+function showHidden(){ showTab("find"); $("#fstatus").value = "new"; $("#fhidden").checked = true; loadJobs(); }
 
 async function renderDetail(id, target){
   const j = await api("/api/job/" + id);
@@ -333,7 +351,8 @@ async function renderDetail(id, target){
     <div class="jt" style="font-size:17px">${esc(j.title)}</div>
     <div class="meta">${esc(j.company)} · ${esc(j.location)} · ${esc(j.region)} · posted ${esc(j.posted||"?")} · via ${esc(j.source)}</div>
     <div class="chips" style="margin-top:8px">${sponsorChip(j.sponsor_label)}${langChips(j.lang_flags)}<span class="chip">Fit ${j.rank}</span>${j.salary?`<span class="chip">${esc(j.salary)}</span>`:""}</div>
-    <div style="margin-top:10px">${safeUrl(j.url)?`<a class="btn" href="${esc(safeUrl(j.url))}" target="_blank" rel="noopener">Open & apply ↗</a>`:""}</div>
+    ${j.visible===0&&j.hide_reason?`<div class="chips" style="margin-top:6px"><span class="chip bad">Filtered out: ${esc(j.hide_reason)}</span></div>`:""}
+    <div class="kit" id="d_kit"><div class="muted small">Preparing application kit…</div></div>
     <div class="statusrow">${STATUSES.map(([k,l]) => `<button class="${j.status===k?"on":""}" data-s="${k}">${l}</button>`).join("")}</div>
     <h3>Sponsorship evidence</h3>
     ${(j.sponsor_evidence||[]).length ? j.sponsor_evidence.map(e => `<div class="ev">${esc(e)}</div>`).join("") : '<div class="ev">No mention found. Many companies sponsor without saying so — check their careers page or ask the recruiter.</div>'}
@@ -345,9 +364,6 @@ async function renderDetail(id, target){
       <label class="small">Follow up <input type="date" id="d_follow" value="${esc(j.follow_up||"")}"></label></div>
     <textarea id="d_notes" placeholder="Notes: recruiter name, referral, interview prep…" style="min-height:70px">${esc(j.notes||"")}</textarea>
     <div style="margin-top:6px"><button class="btn ghost" id="d_save">Save notes & dates</button></div>
-    <h3>Cover letter</h3>
-    <div class="filters"><button class="btn ghost" id="d_lt">Tailored template</button><button class="btn ghost" id="d_ai">Write with Claude (API key)</button><button class="btn ghost" id="d_copy">Copy</button></div>
-    <textarea id="d_letter" style="min-height:260px" placeholder="Generate a letter, then edit it before sending."></textarea>
     <h3>Job description</h3><div class="desc">${esc(j.description)}</div>`;
   box.querySelectorAll(".statusrow button").forEach(b => b.onclick = async () => {
     await api("/api/job/" + id, {status: b.dataset.s}); toast("Marked as " + b.textContent);
@@ -355,10 +371,36 @@ async function renderDetail(id, target){
     if ($("#t-find").classList.contains("on")) loadJobs(); if ($("#t-pipe").classList.contains("on")) loadPipe();
   });
   box.querySelector("#d_save").onclick = async () => { await api("/api/job/" + id, {notes:$("#d_notes").value, applied_at:$("#d_applied").value, follow_up:$("#d_follow").value}); toast("Saved"); };
-  const gen = async mode => { const t = box.querySelector("#d_letter"); t.value = "Writing…"; try { t.value = (await api("/api/letter/" + id, {mode})).letter; } catch(e){ t.value = ""; toast(e.message); } };
-  box.querySelector("#d_lt").onclick = () => gen("template");
-  box.querySelector("#d_ai").onclick = () => gen("ai");
-  box.querySelector("#d_copy").onclick = () => { navigator.clipboard.writeText(box.querySelector("#d_letter").value); toast("Copied"); };
+  renderKit(id, j, box, target);
+}
+
+const copyText = (t, msg) => { navigator.clipboard.writeText(t); toast(msg || "Copied"); };
+async function renderKit(id, j, box, target){
+  const k = await api("/api/kit/" + id);
+  const kb = box.querySelector("#d_kit");
+  const url = safeUrl(k.url);
+  kb.innerHTML = `
+    <h3 style="margin-top:14px">Application kit</h3>
+    <div class="kitbox">
+      <div class="small">1. Attach your <b>${esc(k.cv_label)}</b> (as PDF).</div>
+      <div class="small" style="margin-top:4px">2. Use the cover letter and answers below. Edit anything in [brackets] first.</div>
+      <div class="filters" style="margin-top:10px">
+        ${url?`<a class="btn" href="${esc(url)}" target="_blank" rel="noopener">Open job & apply ↗</a>`:""}
+        ${k.mailto?`<a class="btn ghost" href="${esc(k.mailto)}">Email application to ${esc(k.emails[0])}</a>`:""}
+        <button class="btn ghost" id="k_applied">I applied ✓</button>
+      </div>
+    </div>
+    <div class="filters"><b class="small">Cover letter</b><span style="flex:1"></span>
+      <button class="btn ghost" id="k_copy">Copy</button><button class="btn ghost" id="k_ai">Rewrite with Claude (API key)</button></div>
+    <textarea id="d_letter" style="min-height:240px">${esc(k.letter)}</textarea>
+    <h3>Ready answers for application forms</h3>
+    <table class="answers">${k.answers.map((a,i) => `<tr><td class="small muted" style="width:38%">${esc(a.q)}</td><td class="small">${esc(a.a)}</td><td style="width:1%"><button class="btn ghost" data-i="${i}" style="padding:4px 8px">Copy</button></td></tr>`).join("")}</table>`;
+  kb.querySelector("#k_copy").onclick = () => copyText(kb.querySelector("#d_letter").value, "Cover letter copied");
+  kb.querySelectorAll(".answers button").forEach(b => b.onclick = () => copyText(k.answers[+b.dataset.i].a, "Answer copied"));
+  kb.querySelector("#k_ai").onclick = async () => { const t = kb.querySelector("#d_letter"); const old = t.value; t.value = "Writing…";
+    try { t.value = (await api("/api/letter/" + id, {mode:"ai"})).letter; } catch(e){ t.value = old; toast(e.message); } };
+  kb.querySelector("#k_applied").onclick = async () => { await api("/api/job/" + id, {status:"applied"}); toast("Marked as applied · follow-up in 7 days");
+    renderDetail(id, target); loadStats(); if ($("#t-find").classList.contains("on")) loadJobs(); if ($("#t-pipe").classList.contains("on")) loadPipe(); };
 }
 
 // ---------- pipeline
@@ -466,25 +508,33 @@ async function loadSettings(){
   $("#s_name").value = CFG.name; $("#s_email").value = CFG.email; $("#s_linkedin").value = CFG.linkedin;
   $("#s_permit").value = CFG.permit_expiry; $("#s_goal").value = CFG.weekly_goal; $("#s_auth").value = CFG.work_auth_sentence; $("#s_intro").value = CFG.letter_intro || ""; $("#s_growth").value = CFG.letter_growth || "";
   $("#s_langs").value = (CFG.ok_languages||[]).join(", "); $("#s_prio").value = (CFG.priority_countries||[]).join(", ");
-  $("#s_hideout").checked = CFG.hide_outside_europe; $("#s_hidex").checked = CFG.hide_excluded_titles;
-  $("#s_groups").innerHTML = ["Finance","Business/Strategy","Tech-adjacent"].map(g => `<label style="margin-right:12px"><input type="checkbox" value="${g}" ${CFG.role_groups.includes(g)?"checked":""}> ${g}</label>`).join("");
+  $("#s_remeu").checked = CFG.allow_remote_europe; $("#s_remww").checked = CFG.allow_worldwide_remote;
+  $("#s_reqsp").checked = CFG.require_sponsor_signal; $("#s_hidesr").checked = CFG.hide_senior; $("#s_home").value = CFG.home_country || "";
+  $("#s_countries").innerHTML = CFG.all_regions.map(c => `<label style="display:block"><input type="checkbox" value="${esc(c)}" ${(CFG.target_countries||[]).includes(c)?"checked":""}> ${esc(c)}</label>`).join("");
+  $("#s_wah").value = CFG.work_auth_home || ""; $("#s_waa").value = CFG.work_auth_abroad || "";
+  $("#s_answers").value = (CFG.form_answers||[]).map(x => `${x.q} :: ${x.a}`).join("\n");
+  $("#s_groups").innerHTML = CFG.all_tracks.map(g => `<label style="display:block"><input type="checkbox" value="${esc(g)}" ${(CFG.role_groups.some(x => CFG.all_tracks.includes(x)) ? CFG.role_groups.includes(g) : true)?"checked":""}> ${esc(g)}</label>`).join("");
   $("#s_sources").innerHTML = Object.entries(CFG.available_sources).map(([k,l]) => `<label style="display:block"><input type="checkbox" value="${k}" ${CFG.sources.includes(k)?"checked":""}> ${esc(l)}</label>`).join("");
   $("#s_azid").value = CFG.adzuna_app_id; $("#s_azset").textContent = CFG.adzuna_app_key_set ? "(saved)" : "";
   $("#s_anset").textContent = CFG.anthropic_api_key_set ? "(saved)" : ""; $("#s_model").value = CFG.anthropic_model;
-  $("#cv").value = (await api("/api/cv")).cv;
+  const cvs = await api("/api/cv"); $("#cv").value = cvs.cv; $("#cv2").value = cvs.cv_analytics || "";
 }
 const csv = s => s.split(",").map(x => x.trim()).filter(Boolean);
 async function saveSettings(){
   const r = await api("/api/settings", {
     name:$("#s_name").value, email:$("#s_email").value, linkedin:$("#s_linkedin").value, permit_expiry:$("#s_permit").value,
     weekly_goal:+$("#s_goal").value || 15, work_auth_sentence:$("#s_auth").value, letter_intro:$("#s_intro").value, letter_growth:$("#s_growth").value, ok_languages:csv($("#s_langs").value),
-    priority_countries:csv($("#s_prio").value), hide_outside_europe:$("#s_hideout").checked, hide_excluded_titles:$("#s_hidex").checked,
+    priority_countries:csv($("#s_prio").value), allow_remote_europe:$("#s_remeu").checked, allow_worldwide_remote:$("#s_remww").checked,
+    require_sponsor_signal:$("#s_reqsp").checked, hide_senior:$("#s_hidesr").checked, home_country:$("#s_home").value.trim() || "Hungary",
+    target_countries:[...$("#s_countries").querySelectorAll("input:checked")].map(x => x.value),
+    work_auth_home:$("#s_wah").value, work_auth_abroad:$("#s_waa").value,
+    form_answers:$("#s_answers").value.split("\n").map(l => l.split("::")).filter(p => p.length >= 2 && p[0].trim()).map(p => ({q:p[0].trim(), a:p.slice(1).join("::").trim()})),
     role_groups:[...$("#s_groups").querySelectorAll("input:checked")].map(x => x.value),
     sources:[...$("#s_sources").querySelectorAll("input:checked")].map(x => x.value),
     adzuna_app_id:$("#s_azid").value, adzuna_app_key:$("#s_azkey").value, anthropic_api_key:$("#s_ankey").value, anthropic_model:$("#s_model").value});
   $("#s_azkey").value = ""; $("#s_ankey").value = ""; toast(`Saved · re-scored ${r.reanalysed} jobs`); loadSettings(); loadStats();
 }
-async function saveCV(){ const r = await api("/api/cv", {cv:$("#cv").value}); toast(`CV saved · re-scored ${r.reanalysed} jobs`); }
+async function saveCV(){ const r = await api("/api/cv", {cv:$("#cv").value, cv_analytics:$("#cv2").value}); toast(`CVs saved · re-scored ${r.reanalysed} jobs`); }
 
 loadHome();
 </script>

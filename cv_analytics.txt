@@ -1,0 +1,14 @@
+ALEX EXAMPLE
+Berlin, Germany | alex@example.com | linkedin.com/in/alex-example
+
+PROFILE
+Sample analytics CV — replace this with your own in Settings. Marketing and RevOps analyst building dashboards and AI automations.
+
+SKILLS
+GA4, Google Search Console, Looker Studio, SQL, HubSpot, Semrush, SEO, n8n, APIs, Claude/LLMs, funnel analysis, B2B SaaS
+
+EXPERIENCE
+Example SaaS Company | Marketing Analyst | 2024 - Present
+- Automated recurring marketing reports with n8n workflows connecting APIs and LLMs, saving hours of manual work each week.
+- Built Looker Studio dashboards combining GA4, Search Console and CRM data to track traffic, rankings and conversions.
+- Analysed HubSpot data to show which content brought in new contacts and pipeline.
