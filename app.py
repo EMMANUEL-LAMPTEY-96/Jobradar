@@ -64,6 +64,7 @@ DEFAULT_SETTINGS = {
     "allow_remote_europe": True,
     "allow_worldwide_remote": False,
     "require_sponsor_signal": True,
+    "home_no_sponsorship_needed": True,
     "hide_senior": True,
     "letter_intro": "",
     "letter_growth": "",
@@ -71,8 +72,12 @@ DEFAULT_SETTINGS = {
                            "for a work permit / EU Blue Card."),
     "work_auth_home": "I live in Hungary on a residence permit for job seeking and would need employer support to switch to a work-based permit.",
     "work_auth_abroad": "Not yet: I would need visa sponsorship (e.g. an EU Blue Card or national skilled-worker permit).",
+    "letter_auth_home": "",
+    "sponsorship_answer_home": "No. I only need a signed employment contract to update my residence permit; no sponsorship process is required.",
+    "sponsorship_answer_abroad": "Yes, I would need visa sponsorship.",
     "form_answers": DEFAULT_FORM_ANSWERS,
-    "sources": ["arbeitnow", "themuse", "remotive", "remoteok", "jobicy", "himalayas", "adzuna"],
+    "sources": ["arbeitnow", "themuse", "remotive", "remoteok", "jobicy", "himalayas", "adzuna", "jooble"],
+    "jooble_key": "",
     "adzuna_app_id": "", "adzuna_app_key": "",
     "anthropic_api_key": "", "anthropic_model": "",
 }
@@ -232,9 +237,12 @@ def hide_reason(an, cfg):
     langs = json.loads(an["lang_flags"])
     if langs:
         return "Requires " + ", ".join(langs)
-    if an["sponsor_label"] == "No":
-        return "Says no sponsorship / needs existing work rights"
     region = an["region"]
+    home = cfg.get("home_country", "Hungary")
+    at_home = region == home
+    # In your home country a job contract is enough for your permit, so sponsorship wording doesn't matter.
+    if an["sponsor_label"] == "No" and not (at_home and cfg.get("home_no_sponsorship_needed", True)):
+        return "Says no sponsorship / needs existing work rights"
     allowed = set(cfg.get("target_countries") or TARGET_REGIONS)
     if cfg.get("allow_remote_europe", True):
         allowed |= {"Remote Europe", "Europe"}
@@ -242,8 +250,7 @@ def hide_reason(an, cfg):
         allowed |= {"Remote (worldwide)"}
     if region not in allowed:
         return f"Location: {region}"
-    home = cfg.get("home_country", "Hungary")
-    if cfg.get("require_sponsor_signal", True) and region != home and an["sponsor_label"] == "Unknown":
+    if cfg.get("require_sponsor_signal", True) and not at_home and an["sponsor_label"] == "Unknown":
         return f"No sponsorship signal (outside {home})"
     if cfg.get("hide_senior", True) and an["senior"]:
         return "Senior role"
@@ -262,7 +269,8 @@ def analyse(j, cfg, cv=None):
     langs = A.language_flags(text, cfg.get("ok_languages") or ["English"])
     region = region_of(j.get("location", ""), j.get("remote"), text)
     rank = r_score * 0.45 + m["score"] * 0.25
-    rank += {"Sponsors": 25, "Likely": 12, "Unknown": 0, "No": -40}[s_label]
+    at_home = region == cfg.get("home_country", "Hungary") and cfg.get("home_no_sponsorship_needed", True)
+    rank += {"Sponsors": 25, "Likely": 12, "Unknown": 0, "No": -40}[s_label] if not at_home else 15
     rank -= 25 * len(langs)
     if region == cfg.get("home_country", "Hungary"):
         rank += 12
@@ -372,7 +380,7 @@ def run_refresh(selected):
                     log("    Mac fix: open Applications › Python 3.x and double-click 'Install Certificates.command', "
                         "then restart JobRadar.")
         if "watchlist" in selected:
-            log("Checking startup watchlist…")
+            log("Checking company watchlist…")
             jobs, status = S.watchlist(cfg, log, load_json(WATCH_PATH, []))
             REFRESH["watch_status"] = status
             n = upsert(jobs, cfg, cv)
@@ -380,7 +388,7 @@ def run_refresh(selected):
             log(f"  → {n} new")
             for k, v in status.items():
                 if v.startswith("error"):
-                    log(f"  ! {k}: {v}  (fix the token in the Startups tab)")
+                    log(f"  ! {k}: {v}  (fix it in the Startups tab)")
         log(f"Done. {total_new} new jobs added.")
     except Exception:
         log("Unexpected error:\n" + traceback.format_exc())
@@ -408,6 +416,17 @@ def newest_sonnet(cfg):
         if "sonnet" in m.get("id", ""):
             return m["id"]
     return models[0]["id"] if models else None
+
+
+def letter_profile(cfg, j):
+    """For jobs in your home country, the letter says no sponsorship is needed."""
+    if j.get("region") == cfg.get("home_country", "Hungary") and cfg.get("home_no_sponsorship_needed", True):
+        p = dict(cfg)
+        p["work_auth_sentence"] = cfg.get("letter_auth_home") or (
+            f"I am based in {cfg.get('home_country', 'Hungary')} and do not need visa sponsorship: "
+            "a signed employment contract is all that is required for my work permit, so I can start promptly.")
+        return p
+    return cfg
 
 
 def ai_letter(cfg, cv, j):
@@ -530,7 +549,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200 if r else 404, row_out(r, True) if r else {"error": "not found"})
             if p == "/api/settings":
                 s = settings()
-                for k in ("adzuna_app_key", "anthropic_api_key"):
+                for k in ("adzuna_app_key", "anthropic_api_key", "jooble_key"):
                     s[k + "_set"] = bool(s.get(k))
                     s[k] = ""
                 s["available_sources"] = {k: v[0] for k, v in S.SOURCES.items()}
@@ -639,7 +658,7 @@ class Handler(BaseHTTPRequestHandler):
                 s = settings()
                 for k, v in b.items():
                     if k in DEFAULT_SETTINGS:
-                        if k in ("adzuna_app_key", "anthropic_api_key") and not v:
+                        if k in ("adzuna_app_key", "anthropic_api_key", "jooble_key") and not v:
                             continue  # blank = keep existing secret
                         s[k] = v
                 save_json(SETTINGS_PATH, s)
@@ -711,14 +730,14 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(404, {"error": "not found"})
         j = dict(r)
         cv_label, cv = cv_for_track(j.get("role_group"))
-        letter = A.cover_letter(cfg, cv, j)
+        letter = A.cover_letter(letter_profile(cfg, j), cv, j)
         home = j.get("region") == cfg.get("home_country", "Hungary")
         fills = {
             "company": j.get("company") or "the company", "title": j.get("title") or "this role",
             "country": j.get("region") or "", "linkedin": cfg.get("linkedin", ""),
             "work_auth": cfg.get("work_auth_home") if home else cfg.get("work_auth_abroad"),
-            "sponsorship_answer": ("Yes: I would need support to switch my Hungarian permit to a work-based one."
-                                   if home else "Yes, I would need visa sponsorship."),
+            "sponsorship_answer": (cfg.get("sponsorship_answer_home") if home
+                                   else cfg.get("sponsorship_answer_abroad")),
         }
         answers = []
         for qa in cfg.get("form_answers") or DEFAULT_FORM_ANSWERS:
@@ -748,10 +767,10 @@ class Handler(BaseHTTPRequestHandler):
             if not cfg.get("anthropic_api_key"):
                 return self._send(400, {"error": "Add an Anthropic API key in Settings to use AI letters."})
             try:
-                return self._send(200, {"letter": ai_letter(cfg, cv, j), "mode": "ai"})
+                return self._send(200, {"letter": ai_letter(letter_profile(cfg, j), cv, j), "mode": "ai"})
             except Exception as e:
                 return self._send(502, {"error": f"AI request failed: {e}"})
-        return self._send(200, {"letter": A.cover_letter(cfg, cv, j), "mode": "template"})
+        return self._send(200, {"letter": A.cover_letter(letter_profile(cfg, j), cv, j), "mode": "template"})
 
 
 def first_existing(*rel_paths):

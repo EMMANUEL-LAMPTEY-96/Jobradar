@@ -1,5 +1,32 @@
 [
   {
+    "name": "Visa (Hungary)",
+    "ats": "smartrecruiters",
+    "token": "Visa?country=hu",
+    "country": "Hungary",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test"
+  },
+  {
+    "name": "Bosch (Hungary)",
+    "ats": "smartrecruiters",
+    "token": "BoschGroup?country=hu",
+    "country": "Hungary",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test"
+  },
+  {
+    "name": "BlackRock (Budapest)",
+    "ats": "workday",
+    "token": "https://blackrock.wd1.myworkdayjobs.com/BlackRock_Professional?q=Budapest",
+    "country": "Hungary",
+    "enabled": true,
+    "known_sponsor": false,
+    "note": "starter guess - press Test"
+  },
+  {
     "name": "Stripe",
     "ats": "greenhouse",
     "token": "stripe",

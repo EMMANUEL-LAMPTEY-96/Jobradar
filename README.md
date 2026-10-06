@@ -15,8 +15,9 @@ Job boards don't filter for visa sponsorship, and most "remote" roles quietly re
 
 | Feature | How it works |
 |---|---|
-| **Job aggregation** | Arbeitnow (with its visa-sponsorship filter), The Muse, Remotive, RemoteOK, Jobicy, Himalayas, optional Adzuna, plus a watchlist of startups on Greenhouse, Lever, Ashby and Workable |
+| **Job aggregation** | Arbeitnow (with its visa-sponsorship filter), The Muse, Remotive, RemoteOK, Jobicy, Himalayas, optional Adzuna and Jooble (Hungarian job boards), plus a company watchlist on Greenhouse, Lever, Ashby, Workable, Workday and SmartRecruiters |
 | **Target tracks** | A job only counts if its title matches one of three tracks: Analytics & Growth (marketing, RevOps, SEO/GEO, AI ops), Finance & Business (financial, FP&A, reporting, business analyst) and Investment & Dev Finance (investment, credit, trade and impact finance) |
+| **Home-country mode** | In the country where you already live, sponsorship wording is ignored, and letters and form answers say no sponsorship is needed |
 | **Strict filters, with reasons** | Removes wrong roles, jobs outside your chosen countries, US-only or worldwide remote roles, ads written in or requiring another language, "no sponsorship" ads, senior roles, and (outside your home country) ads with no sponsorship signal. Every removed job shows why. |
 | **Visa-sponsorship detection** | Positive signals (visa sponsorship, relocation package, EU Blue Card, highly-skilled migrant) versus negatives ("must be eligible to work in the EU", "valid work permit required"), with the evidence shown |
 | **CV match** | Compares ~150 skills between the ad and the right CV for that track (two CVs supported) |

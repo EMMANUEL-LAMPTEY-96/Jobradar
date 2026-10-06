@@ -2,6 +2,7 @@
 {source, ext_id, title, company, location, remote, url, description, posted, salary, tags, visa_flag}
 Only free, public endpoints are used. Adzuna is optional (free API key)."""
 import json
+import re
 import ssl
 import time
 import urllib.parse
@@ -20,6 +21,14 @@ except Exception:
 
 def get_json(url, timeout=25):
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout, context=CTX) as r:
+        return json.loads(r.read().decode("utf-8", "replace"))
+
+
+def post_json(url, payload, timeout=25):
+    req = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST",
+                                 headers={"User-Agent": UA, "Accept": "application/json",
+                                          "Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout, context=CTX) as r:
         return json.loads(r.read().decode("utf-8", "replace"))
 
@@ -278,7 +287,70 @@ def _workable(token):
                    posted=_iso(it.get("published_on")), remote=bool(it.get("telecommuting")))
 
 
-ATS = {"greenhouse": _greenhouse, "lever": _lever, "ashby": _ashby, "workable": _workable}
+def _title_ok(title):
+    """Only fetch full details for jobs whose title matches one of your tracks (saves requests)."""
+    from analyze import role_relevance
+    return role_relevance(title, "", None)[0] > 0
+
+
+def _workday(token, max_details=40):
+    """Workday career sites (used by many Budapest finance & service centres).
+    token = careers URL, e.g. https://company.wd3.myworkdayjobs.com/External?q=Budapest"""
+    u = urllib.parse.urlparse(token if "://" in token else "https://" + token)
+    host = u.netloc
+    tenant = host.split(".")[0]
+    parts = [p for p in u.path.split("/") if p and not re.fullmatch(r"[a-z]{2}-[A-Z]{2}", p)]
+    site = parts[0] if parts else tenant
+    search = urllib.parse.parse_qs(u.query).get("q", ["Budapest"])[0]
+    base = f"https://{host}/wday/cxs/{tenant}/{site}"
+    details = 0
+    for offset in range(0, 200, 20):
+        data = post_json(base + "/jobs", {"appliedFacets": {}, "limit": 20, "offset": offset, "searchText": search})
+        posts = data.get("jobPostings") or []
+        for it in posts:
+            title = it.get("title", "")
+            path = it.get("externalPath", "")
+            desc, loc = " ".join(it.get("bulletFields") or []), it.get("locationsText", "")
+            if _title_ok(title) and details < max_details:
+                try:
+                    info = get_json(base + path).get("jobPostingInfo", {})
+                    desc = clean_text(info.get("jobDescription", "")) or desc
+                    loc = info.get("location") or loc
+                    details += 1
+                except Exception:
+                    pass
+            yield dict(ext_id=path or title, title=title, location=loc or search,
+                       url=f"https://{host}/{site}{path}", description=desc, posted="")
+        if len(posts) < 20:
+            break
+        time.sleep(0.3)
+
+
+def _smartrecruiters(token):
+    """SmartRecruiters public postings. token = company id, optionally '?country=hu'."""
+    company, _, q = token.partition("?")
+    country = urllib.parse.parse_qs(q).get("country", ["hu"])[0]
+    data = get_json(f"https://api.smartrecruiters.com/v1/companies/{company}/postings?limit=100&country={country}")
+    for it in data.get("content", []):
+        loc = it.get("location") or {}
+        title = it.get("name", "")
+        desc = ""
+        if _title_ok(title):
+            try:
+                d = get_json(f"https://api.smartrecruiters.com/v1/companies/{company}/postings/{it.get('id')}")
+                secs = (d.get("jobAd") or {}).get("sections") or {}
+                desc = " ".join(clean_text((secs.get(k) or {}).get("text", "")) for k in
+                                ("companyDescription", "jobDescription", "qualifications", "additionalInformation"))
+            except Exception:
+                pass
+        yield dict(ext_id=str(it.get("id")), title=title,
+                   location=", ".join(x for x in [loc.get("city"), (loc.get("country") or "").upper()] if x),
+                   url=f"https://jobs.smartrecruiters.com/{company}/{it.get('id')}", description=desc,
+                   posted=_iso(it.get("releasedDate")), remote=bool(loc.get("remote")))
+
+
+ATS = {"greenhouse": _greenhouse, "lever": _lever, "ashby": _ashby, "workable": _workable,
+       "workday": _workday, "smartrecruiters": _smartrecruiters}
 
 
 def parse_careers_url(url):
@@ -296,6 +368,11 @@ def parse_careers_url(url):
         return "ashby", parts[-1] if "job-board" in parts else parts[0]
     if "workable.com" in host and parts:
         return "workable", parts[0]
+    if "myworkdayjobs.com" in host:
+        site = [p for p in parts if not re.fullmatch(r"[a-z]{2}-[A-Z]{2}", p)]
+        return "workday", f"https://{u.netloc}/{site[0] if site else ''}?q=Budapest"
+    if "smartrecruiters.com" in host and parts:
+        return "smartrecruiters", parts[-1] if host.startswith("api.") else parts[0]
     return None, None
 
 
@@ -310,15 +387,48 @@ def watchlist(cfg, log, companies):
         try:
             n = 0
             for it in fn(c["token"]):
-                out.append(job(source="Startup watchlist", company=c.get("name", c["token"]),
+                out.append(job(source="Company watchlist",
+                               company=re.sub(r"\s*\(.*?\)\s*$", "", c.get("name", c["token"])),
                                visa_flag=True if c.get("known_sponsor") else None, **it))
                 n += 1
             status[c["name"]] = f"ok ({n} roles)"
         except Exception as e:
             status[c["name"]] = f"error: {e}"
         time.sleep(0.3)
-    log(f"Startup watchlist: {len(out)} jobs from {sum(1 for v in status.values() if v.startswith('ok'))} companies")
+    log(f"Company watchlist: {len(out)} jobs from {sum(1 for v in status.values() if v.startswith('ok'))} companies")
     return out, status
+
+
+# ------------------------------------------------------------------ Jooble (optional free key)
+# Aggregates Hungarian job boards and company sites. Free key: jooble.org/api/about
+JOOBLE_QUERIES = ["marketing analyst", "growth analyst", "revops", "data analyst", "business analyst",
+                  "financial analyst", "fp&a", "financial reporting analyst", "controlling", "investment analyst",
+                  "credit analyst", "graduate programme"]
+
+
+def jooble(cfg, log):
+    key = cfg.get("jooble_key")
+    if not key:
+        log("Jooble: skipped (add a free Jooble API key in Settings for many more Budapest jobs)")
+        return []
+    out = []
+    locations = cfg.get("jooble_locations") or ["Budapest", "Hungary"]
+    for loc in locations:
+        for q in cfg.get("jooble_queries") or JOOBLE_QUERIES:
+            try:
+                data = post_json(f"https://jooble.org/api/{key}", {"keywords": q, "location": loc, "page": "1"})
+            except Exception as e:
+                log(f"Jooble '{q}' {loc}: {e}")
+                continue
+            for it in data.get("jobs", []) or []:
+                out.append(job(source="Jooble", ext_id=str(it.get("id") or it.get("link")), title=it.get("title", ""),
+                               company=it.get("company", ""), location=it.get("location", "") or loc,
+                               url=it.get("link", ""), description=it.get("snippet", ""),
+                               posted=_iso(it.get("updated")), salary=it.get("salary", "") or "",
+                               remote="remote" in (it.get("type", "") + it.get("location", "")).lower()))
+            time.sleep(0.4)
+    log(f"Jooble: {len(out)} jobs")
+    return out
 
 
 SOURCES = {
@@ -329,4 +439,5 @@ SOURCES = {
     "jobicy": ("Jobicy (remote, Europe)", jobicy),
     "himalayas": ("Himalayas (remote)", himalayas),
     "adzuna": ("Adzuna (DE/NL/AT/PL/… needs free key)", adzuna),
+    "jooble": ("Jooble (Hungary job boards, needs free key)", jooble),
 }

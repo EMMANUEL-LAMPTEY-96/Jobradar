@@ -160,10 +160,10 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 <!-- STARTUPS -->
 <section class="tab" id="t-startups">
   <div class="card">
-    <h2>Startup watchlist</h2>
+    <h2>Company watchlist</h2>
     <p class="muted small">Many startups post jobs only on their own careers page (Greenhouse, Lever, Ashby or Workable). Paste a careers page URL and JobRadar will check it for new finance/business roles on every fetch. The starter list is a guess — press <b>Test</b> on each; delete or fix any that fail. Tick “Sponsor-friendly” once you’ve confirmed a company supports visas (e.g. from their careers page or the Dutch IND recognised-sponsor register).</p>
     <div class="filters">
-      <input id="w_url" placeholder="https://boards.greenhouse.io/company  or  https://jobs.lever.co/company" style="flex:1;min-width:280px">
+      <input id="w_url" placeholder="Careers URL: Greenhouse, Lever, Ashby, Workable, Workday (…myworkdayjobs.com/…) or SmartRecruiters" style="flex:1;min-width:280px">
       <input id="w_name" placeholder="Company name" style="width:180px">
       <button class="btn" onclick="addWatch()">Add</button>
     </div>
@@ -216,6 +216,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       <label class="small" style="display:block;margin-top:8px"><input type="checkbox" id="s_remeu"> Include remote jobs open to Europe</label>
       <label class="small" style="display:block"><input type="checkbox" id="s_remww"> Include worldwide remote jobs (often need existing work rights)</label>
       <label class="small" style="display:block"><input type="checkbox" id="s_reqsp"> Outside my home country, only show jobs that mention sponsorship or relocation</label>
+      <label class="small" style="display:block"><input type="checkbox" id="s_homens"> In my home country, ignore sponsorship wording (a job contract is enough for my permit)</label>
       <label class="small" style="display:block"><input type="checkbox" id="s_hidesr"> Hide senior roles (Senior, Lead, Head of, Director)</label>
       <label class="f">Home country (where you already live; sponsorship mention not required)</label><input id="s_home" style="width:200px">
       <label class="f">Languages you can work in (comma-separated)</label><input id="s_langs" style="width:100%">
@@ -223,6 +224,8 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       <h3>Application answers</h3>
       <label class="f">Work authorisation: jobs in your home country</label><input id="s_wah" style="width:100%">
       <label class="f">Work authorisation: jobs abroad</label><input id="s_waa" style="width:100%">
+      <label class="f">Sponsorship question: home country</label><input id="s_sah" style="width:100%">
+      <label class="f">Sponsorship question: abroad</label><input id="s_saa" style="width:100%">
       <label class="f">Common form questions <span class="muted">(one per line: Question :: Answer. You can use {company}, {title}, {linkedin})</span></label>
       <textarea id="s_answers" style="min-height:220px;font-size:12.5px"></textarea>
       <h3>Job sources</h3><div id="s_sources" class="small"></div>
@@ -230,6 +233,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       <p class="muted small">Adzuna (free key at developer.adzuna.com) adds on-site jobs in Germany, Netherlands, Austria, Poland and more. An Anthropic API key enables AI-written cover letters; without it you still get tailored template letters.</p>
       <label class="f">Adzuna App ID</label><input id="s_azid" style="width:100%">
       <label class="f">Adzuna App Key <span class="muted" id="s_azset"></span></label><input id="s_azkey" type="password" style="width:100%" placeholder="leave blank to keep">
+      <label class="f">Jooble API key <span class="muted" id="s_joset"></span> <span class="muted">(free at jooble.org/api/about; adds many Budapest jobs)</span></label><input id="s_jokey" type="password" style="width:100%" placeholder="leave blank to keep">
       <label class="f">Anthropic API key <span class="muted" id="s_anset"></span></label><input id="s_ankey" type="password" style="width:100%" placeholder="leave blank to keep">
       <label class="f">Claude model <span class="muted">(leave blank to pick the newest automatically)</span></label><input id="s_model" style="width:100%">
       <div style="margin-top:12px"><button class="btn" onclick="saveSettings()">Save settings</button></div>
@@ -271,6 +275,8 @@ function showTab(t){
 }
 
 // ---------- helpers
+let HOME = "Hungary";
+function sponsorChipFor(j){ return j.region === HOME ? `<span class="chip good" title="You live here: a job contract is enough for your permit">${esc(HOME)}: contract is enough</span>` : sponsorChip(j.sponsor_label); }
 function sponsorChip(l){ return {Sponsors:'<span class="chip good">Visa sponsorship</span>', Likely:'<span class="chip info">Sponsorship likely</span>', No:'<span class="chip bad">No sponsorship</span>'}[l] || '<span class="chip">Sponsorship unknown</span>'; }
 function langChips(ls){ return (ls||[]).map(l => `<span class="chip warn">Needs ${esc(l)}</span>`).join(""); }
 function scoreCls(n){ return n >= 70 ? "hi" : n >= 45 ? "mid" : ""; }
@@ -280,7 +286,7 @@ function jobCard(j, sel){
     <div class="score ${scoreCls(s)}" title="Overall fit">${s}</div>
     <div><div class="jt">${esc(j.title)}</div>
     <div class="meta">${esc(j.company)} · ${esc(j.location || j.region)} · ${esc(j.posted||"")} · ${esc(j.source)}</div>
-    <div class="chips">${j.visible===0&&j.hide_reason?`<span class="chip bad">Filtered: ${esc(j.hide_reason)}</span>`:""}${sponsorChip(j.sponsor_label)}${langChips(j.lang_flags)}
+    <div class="chips">${j.visible===0&&j.hide_reason?`<span class="chip bad">Filtered: ${esc(j.hide_reason)}</span>`:""}${sponsorChipFor(j)}${langChips(j.lang_flags)}
       <span class="chip">CV match ${j.match_score}%</span>${j.role_group?`<span class="chip">${esc(j.role_group)}</span>`:""}
       ${j.senior?'<span class="chip warn">Senior</span>':""}${j.salary?`<span class="chip">${esc(j.salary)}</span>`:""}
       ${j.status!=="new"?`<span class="chip info">${esc(j.status)}</span>`:""}</div></div></div>`;
@@ -350,7 +356,7 @@ async function renderDetail(id, target){
   box.innerHTML = `
     <div class="jt" style="font-size:17px">${esc(j.title)}</div>
     <div class="meta">${esc(j.company)} · ${esc(j.location)} · ${esc(j.region)} · posted ${esc(j.posted||"?")} · via ${esc(j.source)}</div>
-    <div class="chips" style="margin-top:8px">${sponsorChip(j.sponsor_label)}${langChips(j.lang_flags)}<span class="chip">Fit ${j.rank}</span>${j.salary?`<span class="chip">${esc(j.salary)}</span>`:""}</div>
+    <div class="chips" style="margin-top:8px">${sponsorChipFor(j)}${langChips(j.lang_flags)}<span class="chip">Fit ${j.rank}</span>${j.salary?`<span class="chip">${esc(j.salary)}</span>`:""}</div>
     ${j.visible===0&&j.hide_reason?`<div class="chips" style="margin-top:6px"><span class="chip bad">Filtered out: ${esc(j.hide_reason)}</span></div>`:""}
     <div class="kit" id="d_kit"><div class="muted small">Preparing application kit…</div></div>
     <div class="statusrow">${STATUSES.map(([k,l]) => `<button class="${j.status===k?"on":""}" data-s="${k}">${l}</button>`).join("")}</div>
@@ -430,8 +436,8 @@ function renderWatch(){
   $("#watch").innerHTML = WATCH.map((c,i) => `<tr>
     <td><input type="checkbox" ${c.enabled!==false?"checked":""} onchange="WATCH[${i}].enabled=this.checked"></td>
     <td><input value="${esc(c.name)}" onchange="WATCH[${i}].name=this.value" style="width:140px"></td>
-    <td><select onchange="WATCH[${i}].ats=this.value">${["greenhouse","lever","ashby","workable"].map(a => `<option ${a===c.ats?"selected":""}>${a}</option>`).join("")}</select>
-        <input value="${esc(c.token)}" onchange="WATCH[${i}].token=this.value" style="width:130px"></td>
+    <td><select onchange="WATCH[${i}].ats=this.value">${["greenhouse","lever","ashby","workable","workday","smartrecruiters"].map(a => `<option ${a===c.ats?"selected":""}>${a}</option>`).join("")}</select>
+        <input value="${esc(c.token)}" onchange="WATCH[${i}].token=this.value" style="width:${c.ats==="workday"?260:130}px"></td>
     <td><input value="${esc(c.country||"")}" onchange="WATCH[${i}].country=this.value" style="width:120px"></td>
     <td><input type="checkbox" ${c.known_sponsor?"checked":""} onchange="WATCH[${i}].known_sponsor=this.checked"></td>
     <td class="small" id="ws${i}">${esc(WSTATUS[c.name] || c.note || "")}</td>
@@ -473,7 +479,10 @@ function loadToolkit(){
     ["Wellfound (startups)","https://wellfound.com/jobs"],
     ["Berlin Startup Jobs","https://berlinstartupjobs.com/"],
     ["Landing.jobs (Portugal/EU tech)","https://landing.jobs/jobs"],
-    ["Profession.hu (Hungary)","https://www.profession.hu/"],
+    ["Profession.hu (Hungary) – English-language jobs","https://www.profession.hu/allasok?keyword=english"],
+    ["LinkedIn – Budapest, posted last 24h","https://www.linkedin.com/jobs/search/?location=Budapest&f_TPR=r86400&keywords=analyst"],
+    ["Jobline.hu (Hungary)","https://jobline.hu/"],
+    ["Cvonline.hu (Hungary)","https://www.cvonline.hu/"],
     ["Netherlands – IND recognised sponsors register","https://ind.nl/en/public-register-recognised-sponsors"],
   ];
   $("#boards").innerHTML = boards.map(([l,u]) => `<a href="${u}" target="_blank" rel="noopener">${l} ↗</a>`).join("<br>");
@@ -509,14 +518,14 @@ async function loadSettings(){
   $("#s_permit").value = CFG.permit_expiry; $("#s_goal").value = CFG.weekly_goal; $("#s_auth").value = CFG.work_auth_sentence; $("#s_intro").value = CFG.letter_intro || ""; $("#s_growth").value = CFG.letter_growth || "";
   $("#s_langs").value = (CFG.ok_languages||[]).join(", "); $("#s_prio").value = (CFG.priority_countries||[]).join(", ");
   $("#s_remeu").checked = CFG.allow_remote_europe; $("#s_remww").checked = CFG.allow_worldwide_remote;
-  $("#s_reqsp").checked = CFG.require_sponsor_signal; $("#s_hidesr").checked = CFG.hide_senior; $("#s_home").value = CFG.home_country || "";
+  $("#s_reqsp").checked = CFG.require_sponsor_signal; $("#s_hidesr").checked = CFG.hide_senior; $("#s_homens").checked = CFG.home_no_sponsorship_needed !== false; $("#s_home").value = CFG.home_country || "";
   $("#s_countries").innerHTML = CFG.all_regions.map(c => `<label style="display:block"><input type="checkbox" value="${esc(c)}" ${(CFG.target_countries||[]).includes(c)?"checked":""}> ${esc(c)}</label>`).join("");
-  $("#s_wah").value = CFG.work_auth_home || ""; $("#s_waa").value = CFG.work_auth_abroad || "";
+  $("#s_wah").value = CFG.work_auth_home || ""; $("#s_waa").value = CFG.work_auth_abroad || ""; $("#s_sah").value = CFG.sponsorship_answer_home || ""; $("#s_saa").value = CFG.sponsorship_answer_abroad || "";
   $("#s_answers").value = (CFG.form_answers||[]).map(x => `${x.q} :: ${x.a}`).join("\n");
   $("#s_groups").innerHTML = CFG.all_tracks.map(g => `<label style="display:block"><input type="checkbox" value="${esc(g)}" ${(CFG.role_groups.some(x => CFG.all_tracks.includes(x)) ? CFG.role_groups.includes(g) : true)?"checked":""}> ${esc(g)}</label>`).join("");
   $("#s_sources").innerHTML = Object.entries(CFG.available_sources).map(([k,l]) => `<label style="display:block"><input type="checkbox" value="${k}" ${CFG.sources.includes(k)?"checked":""}> ${esc(l)}</label>`).join("");
   $("#s_azid").value = CFG.adzuna_app_id; $("#s_azset").textContent = CFG.adzuna_app_key_set ? "(saved)" : "";
-  $("#s_anset").textContent = CFG.anthropic_api_key_set ? "(saved)" : ""; $("#s_model").value = CFG.anthropic_model;
+  $("#s_anset").textContent = CFG.anthropic_api_key_set ? "(saved)" : ""; $("#s_joset").textContent = CFG.jooble_key_set ? "(saved)" : ""; $("#s_model").value = CFG.anthropic_model;
   const cvs = await api("/api/cv"); $("#cv").value = cvs.cv; $("#cv2").value = cvs.cv_analytics || "";
 }
 const csv = s => s.split(",").map(x => x.trim()).filter(Boolean);
@@ -525,17 +534,18 @@ async function saveSettings(){
     name:$("#s_name").value, email:$("#s_email").value, linkedin:$("#s_linkedin").value, permit_expiry:$("#s_permit").value,
     weekly_goal:+$("#s_goal").value || 15, work_auth_sentence:$("#s_auth").value, letter_intro:$("#s_intro").value, letter_growth:$("#s_growth").value, ok_languages:csv($("#s_langs").value),
     priority_countries:csv($("#s_prio").value), allow_remote_europe:$("#s_remeu").checked, allow_worldwide_remote:$("#s_remww").checked,
-    require_sponsor_signal:$("#s_reqsp").checked, hide_senior:$("#s_hidesr").checked, home_country:$("#s_home").value.trim() || "Hungary",
+    require_sponsor_signal:$("#s_reqsp").checked, hide_senior:$("#s_hidesr").checked, home_no_sponsorship_needed:$("#s_homens").checked, home_country:$("#s_home").value.trim() || "Hungary",
     target_countries:[...$("#s_countries").querySelectorAll("input:checked")].map(x => x.value),
-    work_auth_home:$("#s_wah").value, work_auth_abroad:$("#s_waa").value,
+    work_auth_home:$("#s_wah").value, work_auth_abroad:$("#s_waa").value, sponsorship_answer_home:$("#s_sah").value, sponsorship_answer_abroad:$("#s_saa").value,
     form_answers:$("#s_answers").value.split("\n").map(l => l.split("::")).filter(p => p.length >= 2 && p[0].trim()).map(p => ({q:p[0].trim(), a:p.slice(1).join("::").trim()})),
     role_groups:[...$("#s_groups").querySelectorAll("input:checked")].map(x => x.value),
     sources:[...$("#s_sources").querySelectorAll("input:checked")].map(x => x.value),
-    adzuna_app_id:$("#s_azid").value, adzuna_app_key:$("#s_azkey").value, anthropic_api_key:$("#s_ankey").value, anthropic_model:$("#s_model").value});
-  $("#s_azkey").value = ""; $("#s_ankey").value = ""; toast(`Saved · re-scored ${r.reanalysed} jobs`); loadSettings(); loadStats();
+    adzuna_app_id:$("#s_azid").value, adzuna_app_key:$("#s_azkey").value, anthropic_api_key:$("#s_ankey").value, jooble_key:$("#s_jokey").value, anthropic_model:$("#s_model").value});
+  $("#s_azkey").value = ""; $("#s_ankey").value = ""; $("#s_jokey").value = ""; toast(`Saved · re-scored ${r.reanalysed} jobs`); loadSettings(); loadStats();
 }
 async function saveCV(){ const r = await api("/api/cv", {cv:$("#cv").value, cv_analytics:$("#cv2").value}); toast(`CVs saved · re-scored ${r.reanalysed} jobs`); }
 
+api("/api/settings").then(s => { HOME = s.home_country || HOME; }).catch(() => {});
 loadHome();
 </script>
 </body>
